@@ -11,21 +11,23 @@
 
 #include <lst_hash_cmp_functions.h>
 
-error_t test_string(uint32_t (*hashfunction)(hash_value_t, lst_hash_table_t *), char *input_FileNameWthPath)
+char *strdup_my(const char *str)
 {
-    FILE *inputFile = fopen(input_FileNameWthPath, "r");
-    if(inputFile == NULL){
-        printf("nossxs %s\n", input_FileNameWthPath);
-        return ERR_SUCCESS;
-    }
+    char *dup = (char *)calloc(strlen(str), 1);
+    if(dup == NULL)
+        return NULL;
 
-    uint32_t numOfValues = 0;
-    fscanf(inputFile, "%d", &numOfValues);
+    strcpy(dup, str);
+    return dup
+}
 
+error_t test_string(uint32_t (*hashfunction)(hash_value_t, lst_hash_table_t *), char **stringArray, 
+                                                                                char  *numOfStrings)
+{
     lst_hash_table_t testingTable = {};
     testingTable.cmpfunction = hasing_compare_string;
     testingTable.hashfunction = hashfunction;
-    testingTable.rehashing = false;
+    testingTable.rehashing = true;
 
     testingTable.allocatedSegment = (lst_hash_node_t *)calloc(numOfValues, sizeof(lst_hash_node_t));
     testingTable.allocatingSize = numOfValues;
@@ -47,9 +49,31 @@ error_t test_string(uint32_t (*hashfunction)(hash_value_t, lst_hash_table_t *), 
     return ERR_SUCCESS;
 }
 
+char ** scanFile(char *filename)
+{
+    FILE *inputFile = fopen(filename, "r");
+
+    int32_t numOfStrings = fscanf(inputFile, "%d", &numOfStrings);
+
+    char **strings = (char **)calloc(numOfStrings, sizeof(char *));
+    char buffer[21] = {};
+
+    for(int i = 0; i < numOfStrings; i++)
+    {
+        fscanf(inputFile, "%s", buffer);
+        strings[i] = strdup_my(buffer);
+    }
+
+    fclose(inputFile);
+
+    return strings;
+}
+
 int main()
 {
-    test_string(hashing_crc32_string, "./string.txt");
+    char **stringArray = scanFile("./string.txt");
+
+    test_string(hashing_crc32_string, stringArray);
 
     return 0;
 }

@@ -2,7 +2,6 @@
 #define HASH_FUNCTIONS_H
 
 #include <stdint.h>
-#include <hash_link.h>
 
 uint32_t hashing_remainder_division_float(hash_value_t inputKey, lst_hash_table_t *table);
 uint32_t hashing_binary_float            (hash_value_t inputKey, lst_hash_table_t *table);
