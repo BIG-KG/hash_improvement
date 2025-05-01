@@ -49,13 +49,12 @@ uint32_t hashing_crc32_string(hash_value_t inputKey, lst_hash_table_t *table)
 {
     unsigned int crc = 0xFFFFFFFF;
     char *string = (char *)inputKey.ptr;
-    int32_t len = strlen(string);
 
-    while (len != 0)
+    while (*string != 0)
         {
             crc = (crc << 8) ^ crc32_table[((crc >> 24) ^ *string) & 255];
             string++;
-            len--;
+            //len--;
         }
 
     return crc % table->tableSize;
@@ -63,7 +62,7 @@ uint32_t hashing_crc32_string(hash_value_t inputKey, lst_hash_table_t *table)
 
 int32_t hasing_compare_string(hash_value_t s1, hash_value_t s2)
 {
-    return !strcmp((char *)s1.ptr, (char *)s2.ptr);
+    return strcmp((char *)s1.ptr, (char *)s2.ptr);
 }
 
 

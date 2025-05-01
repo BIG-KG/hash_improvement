@@ -32,8 +32,9 @@ struct lst_hash_table_t
     uint32_t         tableSize         = 0;
     lst_hash_node_t  *deleteList = NULL;
     uint32_t         allocatingSize    = START_ALLOCATING_SIZE;
-    uint32_t          hashingConst1     = 0;
-    uint32_t          hashingConst2     = 0;
+    uint32_t         hashingConst1     = 0;
+    uint32_t         hashingConst2     = 0;
+    uint32_t         allUsed           = 0;
     bool             rehashing         = false;
 }; 
 

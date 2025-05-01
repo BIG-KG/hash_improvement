@@ -18,62 +18,91 @@ char *strdup_my(const char *str)
         return NULL;
 
     strcpy(dup, str);
-    return dup
+    return dup;
 }
 
 error_t test_string(uint32_t (*hashfunction)(hash_value_t, lst_hash_table_t *), char **stringArray, 
-                                                                                char  *numOfStrings)
+                                                                                uint32_t numOfStrings)
 {
-    lst_hash_table_t testingTable = {};
-    testingTable.cmpfunction = hasing_compare_string;
-    testingTable.hashfunction = hashfunction;
-    testingTable.rehashing = true;
+    lst_hash_table_t table = {};
+    table.cmpfunction = hasing_compare_string;
+    table.hashfunction = hashfunction;
+    table.rehashing = true;
 
-    testingTable.allocatedSegment = (lst_hash_node_t *)calloc(numOfValues, sizeof(lst_hash_node_t));
-    testingTable.allocatingSize = numOfValues;
+    table.allocatedSegment = (lst_hash_node_t *)calloc(numOfStrings * 2, sizeof(lst_hash_node_t));
+    table.allocatingSize = numOfStrings * 2;
 
-    reinit_list_table(&testingTable, TABLE_SIZE_PART1);
-    char *savingString = (char *)calloc(numOfValues * 21, sizeof(char));
+    reinit_list_table(&table, TABLE_SIZE_PART1);
     
-    for(int i = 0; i < numOfValues; i++)
-    {
-        hash_value_t temp;
-        temp.ptr = &savingString[i * 21];
-        fscanf(inputFile, "%s", temp.ptr);
-        add_to_list_table(&testingTable, temp);
-        printf("add val%d \n", i);
-    }
+    uint32_t numOfActions = numOfStrings * 2;
+    uint32_t action = 0, value = 0;
+    srand(0);
 
-    fclose(inputFile);
+    for(int i = 0; i < numOfActions; i++)
+    {
+        action = rand() % 3;
+        value  = rand() % numOfStrings;
+        hash_value_t tmp;
+        tmp.ptr = stringArray[value];
+        //if(strcmp("tudqq", stringArray[value]) * strcmp("evymchc", stringArray[value]) * strcmp("jvculqp", stringArray[value])) continue;
+        //else
+        //{
+        //printf("h %d %d %s\n", i, action, stringArray[value]);
+        //}
+        switch(action)
+        {
+            case 0:
+                add_to_list_table(&table, tmp);
+                break;
+            case 1:
+                //add_to_list_table(&table, tmp);
+                //break;
+                delete_from_list_table(&table, tmp);
+                break;
+            case 2:
+                //add_to_list_table(&table, tmp);
+                //break;
+                find_list_table(tmp, &table);
+                break;
+        }
+
+    }
 
     return ERR_SUCCESS;
 }
 
-char ** scanFile(char *filename)
+char ** scanFile(char *filename, uint32_t *numOfStrings)
 {
     FILE *inputFile = fopen(filename, "r");
 
-    int32_t numOfStrings = fscanf(inputFile, "%d", &numOfStrings);
+    int32_t numOFValues = 0;
+    fscanf(inputFile, "%d", &numOFValues);
 
-    char **strings = (char **)calloc(numOfStrings, sizeof(char *));
-    char buffer[21] = {};
+    char **strings = (char **)calloc(numOFValues,      sizeof(char *));
+    char *buffer   = (char  *)calloc(numOFValues, 21 * sizeof(char));
 
-    for(int i = 0; i < numOfStrings; i++)
+    for(int i = 0; i < numOFValues; i++)
     {
-        fscanf(inputFile, "%s", buffer);
-        strings[i] = strdup_my(buffer);
+        fscanf(inputFile, "%s", buffer + i * 21);
+        strings[i] = buffer + i * 21;
     }
 
     fclose(inputFile);
+
+    *numOfStrings = numOFValues;
 
     return strings;
 }
 
 int main()
 {
-    char **stringArray = scanFile("./string.txt");
+    uint32_t numOfValues = 0;
 
-    test_string(hashing_crc32_string, stringArray);
+    char **stringArray = scanFile("./string.txt", &numOfValues);
+
+    //printf("%d\n", numOfValues);
+
+    test_string(hashing_crc32_string, stringArray, numOfValues);
 
     return 0;
 }
