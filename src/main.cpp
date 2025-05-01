@@ -3,6 +3,7 @@
 #include <stdint.h>
 #include <string.h>
 #include <assert.h>
+#include <valgrind/callgrind.h>
 
 #include <error_hash.h>
 #include <hash_link.h>
@@ -73,6 +74,7 @@ error_t test_string(uint32_t (*hashfunction)(hash_value_t, lst_hash_table_t *), 
 
 char ** scanFile(char *filename, uint32_t *numOfStrings)
 {
+    CALLGRIND_STOP_INSTRUMENTATION;
     FILE *inputFile = fopen(filename, "r");
 
     int32_t numOFValues = 0;
@@ -90,7 +92,7 @@ char ** scanFile(char *filename, uint32_t *numOfStrings)
     fclose(inputFile);
 
     *numOfStrings = numOFValues;
-
+    CALLGRIND_START_INSTRUMENTATION;
     return strings;
 }
 
