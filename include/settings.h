@@ -3,7 +3,7 @@
 
 const int TABLE_SIZE_PART1 = 1000;
 const int C1_COEFF = 1;
-const int MAX_LOAD_FACTOR = 7;
+const int MAX_LOAD_FACTOR = 10;
 
 #define START_ALLOCATING_SIZE 100
 #define START_AMOUNT_ALLOCATED_SEGMENTS 100

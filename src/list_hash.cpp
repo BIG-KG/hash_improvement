@@ -24,7 +24,6 @@ lst_hash_node_t *find_list_table(hash_value_t targetValue, lst_hash_table_t *has
     while (!hashTable->cmpfunction(head->value, targetValue) && head->next != NULL)
     {
         head = head->next;
-        //  ("111 %d %s\n", head, (char *)head->value.ptr);
     }
 
     if (hashTable->cmpfunction(head->value, targetValue) != 0)
@@ -51,7 +50,6 @@ lst_hash_node_t *find_with_prev_list_table(hash_value_t targetValue, lst_hash_ta
     {
         prevNodeLocal = head;
         head = head->next;
-        //printf("222 %d %s\n", head, (char *)head->value.ptr);
     }
 
     if (hashTable->cmpfunction(head->value, targetValue))
@@ -112,14 +110,15 @@ error_t add_to_list_table(lst_hash_table_t *table, hash_value_t value)
     uint32_t index = table->hashfunction(value, table) % table->tableSize;
     lst_hash_node_t *previousNode = NULL;
 
-    if(find_list_table(value, table) != NULL) return ERR_SUCCESS;
-    
+    if(table->checkIfValueInTable == true){
+        if(find_list_table(value, table) != NULL) return ERR_SUCCESS;
+    }
+
     lst_hash_node_t *newNode = give_next_node_pointer(table);
     newNode->value = value;
     newNode->next = table->table[index];
     newNode->isActive = true;
     table->table[index] = newNode;
-    table->listCounter[index]++;
     table->numberOfElements++;
 
     return check_coefficient_list_table(table);
@@ -128,7 +127,9 @@ error_t add_to_list_table(lst_hash_table_t *table, hash_value_t value)
 error_t delete_from_list_table(lst_hash_table_t *table, hash_value_t value)
 {
     lst_hash_node_t *previousNode = NULL, *targetNode = NULL;
+    //printf("\n\n\n\n111111111111111111111111\n");
     targetNode = find_with_prev_list_table(value, table, &previousNode);
+    //printf("wdwdw_________++++++++++\n");
 
 
     if (targetNode == NULL)
@@ -142,6 +143,7 @@ error_t delete_from_list_table(lst_hash_table_t *table, hash_value_t value)
         return ERR_SUCCESS;
     }
 
+    //printf("222222222222222222222222222\n");
     previousNode->next = targetNode->next;
 
     targetNode->next = table->deleteList;
@@ -149,7 +151,8 @@ error_t delete_from_list_table(lst_hash_table_t *table, hash_value_t value)
     targetNode->isActive = false;
     table->numberOfElements--;
 
-    table->listCounter[table->hashfunction(value, table)]--;
+    //printf("333333333333333333333333333\n");
+    //printf("444444444444444444444444444\n");
     return ERR_SUCCESS;   
 }
 
@@ -159,11 +162,13 @@ error_t check_coefficient_list_table(lst_hash_table_t *table)
 
     if ((float)table->numberOfElements / (float)table->tableSize >= MAX_LOAD_FACTOR)
     {
+        printf("reallocating table_________________%d\n", table->tableSize);
         error_t error = ERR_SUCCESS;
         if(error = reinit_list_table(table, next_prime(table->tableSize * 2))) return error;
 
         table->numberOfElements = 0;
         table->rehashing = false;
+        table->checkIfValueInTable = false;
         uint32_t currentUsed = table->allUsed;
         table->allUsed = 0;
 
@@ -176,6 +181,7 @@ error_t check_coefficient_list_table(lst_hash_table_t *table)
         table->deleteList = NULL;
         table->allUsed = table->numberOfElements;
         table->rehashing = true;
+        table->checkIfValueInTable = true;
     }
 
     return ERR_SUCCESS;
@@ -196,15 +202,7 @@ error_t reinit_list_table(lst_hash_table_t *table, uint32_t size)
     free(table->table);
     table->table = newTable;
 
-    uint32_t *newCounter = NULL;
-    newCounter = (uint32_t *)calloc(size, sizeof(uint32_t));
-    if(newCounter == NULL) return ERR_NO_MEMORY;
-
-    free(table->listCounter);
-    table->listCounter = newCounter;
-
     table->tableSize = size;
-
 
     table->hashingConst1 = next_prime(rand() % 1024);
     table->hashingConst2 = next_prime(rand() % 1024);

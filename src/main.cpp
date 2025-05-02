@@ -10,6 +10,9 @@
 #include <settings.h>
 #include <common.h>
 
+extern "C" uint32_t fnv1a_hash_asm(hash_value_t inputKey, lst_hash_table_t* table);
+
+
 #include <lst_hash_cmp_functions.h>
 
 char *strdup_my(const char *str)
@@ -41,32 +44,27 @@ error_t test_string(uint32_t (*hashfunction)(hash_value_t, lst_hash_table_t *), 
     srand(0);
 
     for(int i = 0; i < numOfActions; i++)
-    {
-        action = rand() % 3;
+    {   
+        action = rand() % 4;
         value  = rand() % numOfStrings;
         hash_value_t tmp;
         tmp.ptr = stringArray[value];
-        //if(strcmp("tudqq", stringArray[value]) * strcmp("evymchc", stringArray[value]) * strcmp("jvculqp", stringArray[value])) continue;
-        //else
-        //{
-        //printf("h %d %d %s\n", i, action, stringArray[value]);
-        //}
+        //printf("h %d %d %s______________________\n", i, action, stringArray[value]);
+        CALLGRIND_TOGGLE_COLLECT;
         switch(action)
         {
             case 0:
+            case 1:
                 add_to_list_table(&table, tmp);
                 break;
-            case 1:
-                //add_to_list_table(&table, tmp);
-                //break;
+            case 2:
                 delete_from_list_table(&table, tmp);
                 break;
-            case 2:
-                //add_to_list_table(&table, tmp);
-                //break;
+            case 3:
                 find_list_table(tmp, &table);
                 break;
         }
+        CALLGRIND_TOGGLE_COLLECT;
 
     }
 
@@ -99,15 +97,15 @@ char ** scanFile(char *filename, uint32_t *numOfStrings)
 
 int main(int argc, char *argv[]){
     uint32_t numOfValues = 0;
-    if(argc != 2) assert(0);
+    //if(argc != 2) assert(0);
 
     char **stringArray = scanFile("./string.txt", &numOfValues);
 
-    if(strcmp(argv[1], "1") == 0)
-    test_string(hashing_crc32_string, stringArray, numOfValues);
-
+    if(argc == 1 || !strcmp(argv[1], "1"))
+        test_string(fnv1a_hash_asm, stringArray, numOfValues);
     else
-    test_string(hashing_crc32_string_asm, stringArray, numOfValues);
+        test_string(fnv1a_hash,     stringArray, numOfValues);
+    
 
     return 0;
 }

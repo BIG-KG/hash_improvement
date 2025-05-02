@@ -5,15 +5,18 @@ OBJ_DIR = obj
 CXX = g++
 CXXFLAGS = -g -msse2 -msse4.1 -mavx -I$(INCLUDE_DIR)
 
-SRCS = $(wildcard $(SRC_DIR)/*.cpp)
-OBJS = $(patsubst $(SRC_DIR)/%.cpp, $(OBJ_DIR)/%.o, $(SRCS))
+SRCS     = $(wildcard $(SRC_DIR)/*.cpp)
+SRCS_ASM = $(wildcard $(SRC_DIR)/*.s)
+OBJS     = $(patsubst $(SRC_DIR)/%.cpp, $(OBJ_DIR)/%.o, $(SRCS))
+OBJS_ASM = $(patsubst $(SRC_DIR)/%.s,   $(OBJ_DIR)/%.o, $(SRCS))
 
 TARGET = main
 
 all: $(TARGET)
 
 $(TARGET): $(OBJS) | $(BIN_DIR)
-	$(CXX) $(CXXFLAGS) -o $@ $^
+	nasm -f elf64 -g -O1 ./src/hash_funcktion.s -o ./obj/hash_funcktion.o
+	$(CXX) $(CXXFLAGS) -o $@  $^ ./obj/hash_funcktion.o
 
 $(OBJ_DIR)/%.o: $(SRC_DIR)/%.cpp | $(OBJ_DIR)
 	$(CXX) $(CXXFLAGS) -c $< -o $@
