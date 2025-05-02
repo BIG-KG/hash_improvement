@@ -17,6 +17,8 @@ uint32_t hashing_length_string(hash_value_t inputKey, lst_hash_table_t *table);
 uint32_t hashing_sum_string(hash_value_t inputKey, lst_hash_table_t *table);
 uint32_t hashing_polynomial_string(hash_value_t inputKey, lst_hash_table_t *table);
 uint32_t hashing_crc32_string(hash_value_t inputKey, lst_hash_table_t *table);
+uint32_t hashing_crc32_string_asm(hash_value_t inputKey, lst_hash_table_t *table);
+
 
 int32_t hasing_compare_float(hash_value_t firstKey, hash_value_t secondKey);
 int32_t hasing_compare_int(hash_value_t firstKey, hash_value_t secondKey);

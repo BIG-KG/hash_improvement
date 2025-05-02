@@ -26,6 +26,7 @@ error_t test_string(uint32_t (*hashfunction)(hash_value_t, lst_hash_table_t *), 
                                                                                 uint32_t numOfStrings)
 {
     lst_hash_table_t table = {};
+
     table.cmpfunction = hasing_compare_string;
     table.hashfunction = hashfunction;
     table.rehashing = true;
@@ -96,15 +97,17 @@ char ** scanFile(char *filename, uint32_t *numOfStrings)
     return strings;
 }
 
-int main()
-{
+int main(int argc, char *argv[]){
     uint32_t numOfValues = 0;
+    if(argc != 2) assert(0);
 
     char **stringArray = scanFile("./string.txt", &numOfValues);
 
-    //printf("%d\n", numOfValues);
-
+    if(strcmp(argv[1], "1") == 0)
     test_string(hashing_crc32_string, stringArray, numOfValues);
+
+    else
+    test_string(hashing_crc32_string_asm, stringArray, numOfValues);
 
     return 0;
 }
