@@ -12,7 +12,6 @@
 
 extern "C" uint32_t fnv1a_hash_asm(hash_value_t inputKey, lst_hash_table_t* table);
 
-
 #include <lst_hash_cmp_functions.h>
 
 char *strdup_my(const char *str)
@@ -80,12 +79,12 @@ char ** scanFile(char *filename, uint32_t *numOfStrings)
     fscanf(inputFile, "%d", &numOFValues);
 
     char **strings = (char **)calloc(numOFValues,      sizeof(char *));
-    char *buffer   = (char  *)calloc(numOFValues, 21 * sizeof(char));
+    char *buffer   = (char  *)calloc(numOFValues, 32 * sizeof(char));
 
     for(int i = 0; i < numOFValues; i++)
     {
-        fscanf(inputFile, "%s", buffer + i * 21);
-        strings[i] = buffer + i * 21;
+        fscanf(inputFile, "%s", buffer + i * 32);
+        strings[i] = buffer + i * 32;
     }
 
     fclose(inputFile);
@@ -101,10 +100,10 @@ int main(int argc, char *argv[]){
 
     char **stringArray = scanFile("./string.txt", &numOfValues);
 
-    if(argc == 1 || !strcmp(argv[1], "1"))
-        test_string(fnv1a_hash_asm, stringArray, numOfValues);
+    if(argc == 1 || !strcmp(argv[1], "0"))
+        test_string(fnv1a_hash, stringArray, numOfValues);
     else
-        test_string(fnv1a_hash,     stringArray, numOfValues);
+        test_string(fnv1a_hash_asm,     stringArray, numOfValues);
     
 
     return 0;

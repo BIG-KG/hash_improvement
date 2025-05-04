@@ -26,10 +26,10 @@ struct lst_hash_table_t
     uint32_t         tableSize         = 0;
     uint32_t         hashingConst1     = 0;
     uint32_t         hashingConst2     = 0;
-    uint32_t         checkIfValueInTable = true;
     uint32_t         (*hashfunction)(hash_value_t, lst_hash_table_t *);
-    int32_t          (*cmpfunction) (hash_value_t, hash_value_t);
     lst_hash_node_t  **table           = NULL;
+    int32_t          (*cmpfunction) (hash_value_t, hash_value_t);
+    uint32_t         checkIfValueInTable = true;
     lst_hash_node_t  *allocatedSegment = NULL;
     uint32_t         numberOfElements  = 0;
     lst_hash_node_t  *deleteList       = NULL;

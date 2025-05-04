@@ -10,5 +10,6 @@ uint32_t fnv1a_hash(hash_value_t inputKey, lst_hash_table_t* table);
 
 
 int32_t hasing_compare_string(hash_value_t firstKey, hash_value_t secondKey);
+int32_t hasing_compare_string_simd(hash_value_t s1Struct, hash_value_t s2Struct);
 
 #endif //HASH_FUNCTIONS_H

@@ -7,7 +7,6 @@
 #include <error_hash.h>
 #include <hash_link.h>
 #include <settings.h>
-#include <SDL2/SDL.h>
 
 uint32_t hashing_length_string(hash_value_t inputKey, lst_hash_table_t *table)
 {
@@ -54,11 +53,4 @@ uint32_t fnv1a_hash(hash_value_t inputKey, lst_hash_table_t *table) {
     }
     return hash % table->tableSize;
 }
-
-int32_t hasing_compare_string(hash_value_t s1, hash_value_t s2)
-{
-    return strcmp((char *)s1.ptr, (char *)s2.ptr);
-}
-
-
 

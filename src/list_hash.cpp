@@ -13,7 +13,7 @@ error_t realloc_list_table(lst_hash_table_t *table);
 
 lst_hash_node_t *find_list_table(hash_value_t targetValue, lst_hash_table_t *hashTable)
 {
-    uint32_t index = hashTable->hashfunction(targetValue, hashTable) % hashTable->tableSize;
+    uint32_t index = hashTable->hashfunction(targetValue, hashTable);
     lst_hash_node_t *head = hashTable->table[index];
 
     if (head == NULL)
@@ -32,6 +32,60 @@ lst_hash_node_t *find_list_table(hash_value_t targetValue, lst_hash_table_t *has
     }
 
     return head;
+}
+
+lst_hash_node_t *find_list_table_nasm(hash_value_t targetValue, lst_hash_table_t *hashTable)
+{
+    lst_hash_node_t *result = NULL;
+    __asm__ __volatile__ (
+        "push %%rbp\n"
+        "mov %%rsp, %%rbp\n"
+        "and $-16, %%rsp\n"
+    
+        "mov 16(%[hashTable]), %%rbx\n"       // rbx = hashTable->hashfunction
+        "mov %[targetValue], %%rdi\n"         // 1st arg = targetValue
+        "mov %[hashTable], %%rsi\n"           // 2nd arg = hashTable
+        "call *(%%rbx)\n"                     // call hashfunction
+    
+        "mov 24(%[hashTable]), %%rdx\n"       // rdx = hashTable->table
+        "mov (%%rdx,%%rax,8), %%rbx\n"        // rbx = hashTable->table[index]
+    
+        "test %%rbx, %%rbx\n"                 // if (head == NULL)
+        "jnz .check\n"                        // goto .check
+        "mov $0, %[result]\n"                 // result = NULL
+        "jmp .end\n"                          // return
+    
+        ".Loop:\n"
+        "mov (%%rbx), %%rbx\n"                // rbx = next
+    
+        ".check:\n"
+        "mov %[targetValue], %%rdi\n"         // 1st arg = targetValue
+        "mov 8(%%rbx), %%rsi\n"               // 2nd arg = value
+        "call *(%[cmpF])\n"                   // call cmpfunction
+        "test %%eax, %%eax\n"                 // eax == 0 if match
+        "jnz .checkFalseNext\n"               // if not match, continue
+        "mov %%rbx, %[result]\n"              // result = rbx
+        "jmp .end\n"
+    
+        ".checkFalseNext:\n"
+        "test %%rax, (%%rbx)\n"
+        "jnz .Loop\n"
+        "mov $0, %[result]\n"                 // result = NULL
+        "jmp .end\n"
+    
+        ".end:\n"
+        "mov %%rbp, %%rsp\n"
+        "pop %%rbp\n"
+        : [result] "=r" (result)
+        : [cmpF] "r" (hashTable->cmpfunction),
+          [targetValue] "r" (targetValue),
+          [hashTable] "r" (hashTable)
+        : "rax", "rbx", "rcx", "rdx", "rdi", "rsi",
+          "r8", "r9", "r10", "r11", "xmm0", "xmm1", "cc", "memory"
+    );
+    
+
+    return result;
 }
 
 lst_hash_node_t *find_with_prev_list_table(hash_value_t targetValue, lst_hash_table_t *hashTable, lst_hash_node_t **previousNode)
