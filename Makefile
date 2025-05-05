@@ -3,7 +3,7 @@ SRC_DIR = src
 OBJ_DIR = obj
 
 CXX = g++
-CXXFLAGS = -g -msse2 -msse4.1 -mavx -msse4.2 -I$(INCLUDE_DIR)
+CXXFLAGS = -g -msse2 -msse4.1 -mavx -msse4.2 -I$(INCLUDE_DIR) -O3
 
 SRCS     = $(wildcard $(SRC_DIR)/*.cpp)
 SRCS_ASM = $(wildcard $(SRC_DIR)/*.s)

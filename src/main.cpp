@@ -24,21 +24,25 @@ char *strdup_my(const char *str)
     return dup;
 }
 
-error_t test_string(uint32_t (*hashfunction)(hash_value_t, lst_hash_table_t *), char **stringArray, 
-                                                                                uint32_t numOfStrings)
+error_t test_string(uint32_t         (*hashfunction)(hash_value_t, lst_hash_table_t *),
+                    int32_t          (*cmpFunction) (hash_value_t, hash_value_t),
+                    lst_hash_node_t *(*findFunction)(hash_value_t targetValue, lst_hash_table_t *hashTable),
+                    char **stringArray, uint32_t numOfStrings                                                      )
 {
     lst_hash_table_t table = {};
 
-    table.cmpfunction = hasing_compare_string;
+    table.cmpFunction = cmpFunction;
     table.hashfunction = hashfunction;
     table.rehashing = true;
 
-    table.allocatedSegment = (lst_hash_node_t *)calloc(numOfStrings * 2, sizeof(lst_hash_node_t));
-    table.allocatingSize = numOfStrings * 2;
+    table.allocatedSegment = (lst_hash_node_t *)calloc(numOfStrings * 30, sizeof(lst_hash_node_t));
+    table.allocatingSize = numOfStrings * 30;
+
+    table.findFunction = findFunction;
 
     reinit_list_table(&table, TABLE_SIZE_PART1);
     
-    uint32_t numOfActions = numOfStrings * 2;
+    uint32_t numOfActions = numOfStrings * 30;
     uint32_t action = 0, value = 0;
     srand(0);
 
@@ -60,7 +64,7 @@ error_t test_string(uint32_t (*hashfunction)(hash_value_t, lst_hash_table_t *), 
                 delete_from_list_table(&table, tmp);
                 break;
             case 3:
-                find_list_table(tmp, &table);
+                table.findFunction(tmp, &table);
                 break;
         }
         CALLGRIND_TOGGLE_COLLECT;
@@ -96,15 +100,24 @@ char ** scanFile(char *filename, uint32_t *numOfStrings)
 
 int main(int argc, char *argv[]){
     uint32_t numOfValues = 0;
-    //if(argc != 2) assert(0);
-
     char **stringArray = scanFile("./string.txt", &numOfValues);
 
-    if(argc == 1 || !strcmp(argv[1], "0"))
-        test_string(fnv1a_hash, stringArray, numOfValues);
-    else
-        test_string(fnv1a_hash_asm,     stringArray, numOfValues);
+
+    uint32_t         (*hashfunction)(hash_value_t, lst_hash_table_t *) = fnv1a_hash;
+    int32_t          (*cmpFunction) (hash_value_t, hash_value_t)       = hasing_compare_string;
+    lst_hash_node_t *(*findFunction)(hash_value_t targetValue, lst_hash_table_t *hashTable) = find_list_table;
     
 
+    if (argc == 4){
+        if(!strcmp(argv[1], "1"))
+            hashfunction = fnv1a_hash_asm;
+        if(!strcmp(argv[2], "1"))
+            cmpFunction = hasing_compare_string_simd;
+        if(!strcmp(argv[3], "1"))
+            findFunction = find_list_table_nasm;
+    }
+
+    test_string(hashfunction, cmpFunction, findFunction, stringArray, numOfValues);
+    
     return 0;
 }

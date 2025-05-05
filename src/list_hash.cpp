@@ -13,7 +13,7 @@ error_t realloc_list_table(lst_hash_table_t *table);
 
 lst_hash_node_t *find_list_table(hash_value_t targetValue, lst_hash_table_t *hashTable)
 {
-    uint32_t index = hashTable->hashfunction(targetValue, hashTable);
+    uint32_t index = hashTable->hashfunction(targetValue, hashTable);// % hashTable->tableSize;
     lst_hash_node_t *head = hashTable->table[index];
 
     if (head == NULL)
@@ -21,23 +21,24 @@ lst_hash_node_t *find_list_table(hash_value_t targetValue, lst_hash_table_t *has
         return NULL;
     }
 
-    while (!hashTable->cmpfunction(head->value, targetValue) && head->next != NULL)
+    while (!hashTable->cmpFunction(head->value, targetValue) && head->next != NULL)
     {
         head = head->next;
     }
 
-    if (hashTable->cmpfunction(head->value, targetValue) != 0)
+    if (hashTable->cmpFunction(head->value, targetValue) != 0)
     {
         return NULL;
     }
 
     return head;
 }
-
+__attribute__((optimize("O0")))
 lst_hash_node_t *find_list_table_nasm(hash_value_t targetValue, lst_hash_table_t *hashTable)
 {
     lst_hash_node_t *result = NULL;
-    __asm__ __volatile__ (
+    
+ __asm__ __volatile__ (
         "push %%rbp\n"
         "mov %%rsp, %%rbp\n"
         "and $-16, %%rsp\n"
@@ -45,7 +46,7 @@ lst_hash_node_t *find_list_table_nasm(hash_value_t targetValue, lst_hash_table_t
         "mov 16(%[hashTable]), %%rbx\n"       // rbx = hashTable->hashfunction
         "mov %[targetValue], %%rdi\n"         // 1st arg = targetValue
         "mov %[hashTable], %%rsi\n"           // 2nd arg = hashTable
-        "call *(%%rbx)\n"                     // call hashfunction
+        "call *%%rbx\n"                     // call hashfunction
     
         "mov 24(%[hashTable]), %%rdx\n"       // rdx = hashTable->table
         "mov (%%rdx,%%rax,8), %%rbx\n"        // rbx = hashTable->table[index]
@@ -61,14 +62,14 @@ lst_hash_node_t *find_list_table_nasm(hash_value_t targetValue, lst_hash_table_t
         ".check:\n"
         "mov %[targetValue], %%rdi\n"         // 1st arg = targetValue
         "mov 8(%%rbx), %%rsi\n"               // 2nd arg = value
-        "call *(%[cmpF])\n"                   // call cmpfunction
+        "call *%[cmpF]\n"                     // call cmpfunction
         "test %%eax, %%eax\n"                 // eax == 0 if match
         "jnz .checkFalseNext\n"               // if not match, continue
         "mov %%rbx, %[result]\n"              // result = rbx
         "jmp .end\n"
     
         ".checkFalseNext:\n"
-        "test %%rax, (%%rbx)\n"
+        "test %%eax, (%%rbx)\n"
         "jnz .Loop\n"
         "mov $0, %[result]\n"                 // result = NULL
         "jmp .end\n"
@@ -77,44 +78,16 @@ lst_hash_node_t *find_list_table_nasm(hash_value_t targetValue, lst_hash_table_t
         "mov %%rbp, %%rsp\n"
         "pop %%rbp\n"
         : [result] "=r" (result)
-        : [cmpF] "r" (hashTable->cmpfunction),
+        : [cmpF] "r" (hashTable->cmpFunction),
           [targetValue] "r" (targetValue),
           [hashTable] "r" (hashTable)
-        : "rax", "rbx", "rcx", "rdx", "rdi", "rsi",
-          "r8", "r9", "r10", "r11", "xmm0", "xmm1", "cc", "memory"
+        : "rax", "rbx", "rcx", "rdx", "rdi", "rsi", "r8", "r9", "r10", "r11",
+        "xmm0", "xmm1", "cc", "memory"
     );
-    
 
     return result;
 }
 
-lst_hash_node_t *find_with_prev_list_table(hash_value_t targetValue, lst_hash_table_t *hashTable, lst_hash_node_t **previousNode)
-{
-    uint32_t index = hashTable->hashfunction(targetValue, hashTable) % hashTable->tableSize;
-    lst_hash_node_t *head = hashTable->table[index];
-    lst_hash_node_t *prevNodeLocal = NULL;
-
-    if (head == NULL)
-    {
-        *previousNode = NULL;
-        return head;
-    }
-
-    while (head->next != NULL && hashTable->cmpfunction(head->value, targetValue))
-    {
-        prevNodeLocal = head;
-        head = head->next;
-    }
-
-    if (hashTable->cmpfunction(head->value, targetValue))
-    {
-        *previousNode = NULL;
-        return NULL;
-    }
-
-    *previousNode = prevNodeLocal; 
-    return head;
-}
 
 lst_hash_node_t *give_next_node_pointer(lst_hash_table_t *table)
 {
@@ -152,6 +125,9 @@ error_t realloc_list_table(lst_hash_table_t *table)
     {
         if(i->next != NULL)
             i->next += (table->allocatedSegment - oldNode) / sizeof(lst_hash_node_t);
+
+        if(i->prev != NULL)
+            i->prev += (table->allocatedSegment - oldNode) / sizeof(lst_hash_node_t);
     }
 
     table->allocatingSize = newSize; 
@@ -165,7 +141,7 @@ error_t add_to_list_table(lst_hash_table_t *table, hash_value_t value)
     lst_hash_node_t *previousNode = NULL;
 
     if(table->checkIfValueInTable == true){
-        if(find_list_table(value, table) != NULL) return ERR_SUCCESS;
+        if(table->findFunction(value, table) != NULL) return ERR_SUCCESS;
     }
 
     lst_hash_node_t *newNode = give_next_node_pointer(table);
@@ -175,21 +151,23 @@ error_t add_to_list_table(lst_hash_table_t *table, hash_value_t value)
     table->table[index] = newNode;
     table->numberOfElements++;
 
+    newNode->prev = NULL;
+    if(newNode->next != NULL) newNode->next->prev = newNode;
+
     return check_coefficient_list_table(table);
 }
 
 error_t delete_from_list_table(lst_hash_table_t *table, hash_value_t value)
 {
     lst_hash_node_t *previousNode = NULL, *targetNode = NULL;
-    //printf("\n\n\n\n111111111111111111111111\n");
-    targetNode = find_with_prev_list_table(value, table, &previousNode);
-    //printf("wdwdw_________++++++++++\n");
-
+    targetNode = table->findFunction(value, table);
 
     if (targetNode == NULL)
     {
         return ERR_SUCCESS;
     }
+
+    previousNode = targetNode->prev;
 
     if (previousNode == NULL)
     {
@@ -197,7 +175,6 @@ error_t delete_from_list_table(lst_hash_table_t *table, hash_value_t value)
         return ERR_SUCCESS;
     }
 
-    //printf("222222222222222222222222222\n");
     previousNode->next = targetNode->next;
 
     targetNode->next = table->deleteList;
@@ -205,8 +182,6 @@ error_t delete_from_list_table(lst_hash_table_t *table, hash_value_t value)
     targetNode->isActive = false;
     table->numberOfElements--;
 
-    //printf("333333333333333333333333333\n");
-    //printf("444444444444444444444444444\n");
     return ERR_SUCCESS;   
 }
 
@@ -228,7 +203,6 @@ error_t check_coefficient_list_table(lst_hash_table_t *table)
 
         for (size_t i = 0; i < table->allocatingSize && i < currentUsed + 1; i++)
         {
-            //printf("%d %d\n", i, table->allUsed);
             if(table->allocatedSegment[i].isActive) add_to_list_table(table, table->allocatedSegment[i].value);
         }
         
@@ -243,10 +217,6 @@ error_t check_coefficient_list_table(lst_hash_table_t *table)
 
 error_t reinit_list_table(lst_hash_table_t *table, uint32_t size)
 {   
-    // static int counter = 0;
-    // if(counter != 0) {assert(0);}
-    // counter++;
-    //printf("reinitTable_________________%d\n", size);
     if(table == NULL) return ERR_NULL_POINTER;
 
     lst_hash_node_t **newTable = NULL;
@@ -263,3 +233,5 @@ error_t reinit_list_table(lst_hash_table_t *table, uint32_t size)
 
     return ERR_SUCCESS;
 }
+
+

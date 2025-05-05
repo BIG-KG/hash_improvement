@@ -11,7 +11,6 @@ global fnv1a_hash_asm
 
 
 fnv1a_hash_asm:
-    ; Сохраняем регистры, если нужно (по System V ABI, callee-saved регистры не трогаем)
     ; Инициализация
     mov eax, [rsi+4]         ; eax = FNV_OFFSET (2166136261)
                              ; rdi = inputKey.ptr (указатель на строку)
@@ -21,21 +20,19 @@ fnv1a_hash_asm:
 
 .loop:
     ; Загружаем очередной байт строки
-    xor eax, edx                ; hash ^= *str
-    mul ecx                     ; hash *= FNV_PRIME(ecx) (eax *= edx, результат в eax)
+    xor al, dl                  ; hash ^= *str
+    imul eax, ecx               ; hash *= FNV_PRIME(ecx) (eax *= edx, результат в eax)
     inc rdi                     ; str++
 .check:
-    ; Проверка конца строки
     movzx edx, byte [rdi]       ; edx = *str (zero-extend byte to 32-bit)
-    cmp byte edx, 0           ; *str == '\0'?
-    jne .loop                   ; Если не конец, продолжить цикл
+    test dl, dl                 ; *str == '\0'?
+    jnz .loop                   ; Если не конец, продолжить цикл
 
 .done:
     ; Вычисляем hash % tableSize
-    mov rcx, [rsi]              ; rcx = table->tableSize (предполагаем tableSize по смещению 0)
+    mov ecx, [rsi]              ; rcx = table->tableSize (предполагаем tableSize по смещению 0)
     xor edx, edx                ; Обнуляем edx для div
     div rcx                     ; eax / rcx, остаток в edx
     mov eax, edx                ; eax = hash % tableSize
 
-    ; Восстанавливаем регистры и возврат
     ret
