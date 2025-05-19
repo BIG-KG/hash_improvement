@@ -47,6 +47,9 @@ error_t add_to_list_table           (lst_hash_table_t *table, hash_value_t value
 lst_hash_node_t *find_list_table               (hash_value_t targetValue, lst_hash_table_t *hashTable);
 lst_hash_node_t *find_list_table_nasm          (hash_value_t targetValue, lst_hash_table_t *hashTable);
 
-
-
+error_t destroy_list_table(lst_hash_table_t *table);
+error_t init_list_table(uint32_t         (*hashfunction)(hash_value_t, lst_hash_table_t *),
+                        int32_t          (*cmpFunction) (hash_value_t, hash_value_t),
+                        lst_hash_node_t *(*findFunction)(hash_value_t targetValue, lst_hash_table_t *hashTable),
+                        bool rehashing, lst_hash_table_t *table, uint32_t size, uint32_t startNumOfNodes);
 #endif

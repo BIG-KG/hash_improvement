@@ -11,42 +11,16 @@
 
 error_t realloc_list_table(lst_hash_table_t *table);
 
-lst_hash_node_t *find_list_table(hash_value_t targetValue, lst_hash_table_t *hashTable)
-{
-    uint32_t index = hashTable->hashfunction(targetValue, hashTable);// % hashTable->tableSize;
-    lst_hash_node_t *head = hashTable->table[index];
 
-    if (head == NULL)
-    {
-        return NULL;
-    }
-
-    while (!hashTable->cmpFunction(head->value, targetValue) && head->next != NULL)
-    {
-        head = head->next;
-    }
-
-    if (hashTable->cmpFunction(head->value, targetValue) != 0)
-    {
-        return NULL;
-    }
-
-    return head;
-}
-__attribute__((optimize("O0")))
 lst_hash_node_t *find_list_table_nasm(hash_value_t targetValue, lst_hash_table_t *hashTable)
 {
     lst_hash_node_t *result = NULL;
     
  __asm__ __volatile__ (
-        "push %%rbp\n"
-        "mov %%rsp, %%rbp\n"
-        "and $-16, %%rsp\n"
-    
         "mov 16(%[hashTable]), %%rbx\n"       // rbx = hashTable->hashfunction
         "mov %[targetValue], %%rdi\n"         // 1st arg = targetValue
         "mov %[hashTable], %%rsi\n"           // 2nd arg = hashTable
-        "call *%%rbx\n"                     // call hashfunction
+        "call *%%rbx\n"                       // call hashfunction
     
         "mov 24(%[hashTable]), %%rdx\n"       // rdx = hashTable->table
         "mov (%%rdx,%%rax,8), %%rbx\n"        // rbx = hashTable->table[index]
@@ -72,11 +46,8 @@ lst_hash_node_t *find_list_table_nasm(hash_value_t targetValue, lst_hash_table_t
         "test %%eax, (%%rbx)\n"
         "jnz .Loop\n"
         "mov $0, %[result]\n"                 // result = NULL
-        "jmp .end\n"
-    
+            
         ".end:\n"
-        "mov %%rbp, %%rsp\n"
-        "pop %%rbp\n"
         : [result] "=r" (result)
         : [cmpF] "r" (hashTable->cmpFunction),
           [targetValue] "r" (targetValue),
@@ -88,6 +59,28 @@ lst_hash_node_t *find_list_table_nasm(hash_value_t targetValue, lst_hash_table_t
     return result;
 }
 
+lst_hash_node_t *find_list_table(hash_value_t targetValue, lst_hash_table_t *hashTable)
+{
+    uint32_t index = hashTable->hashfunction(targetValue, hashTable);// % hashTable->tableSize;
+    lst_hash_node_t *head = hashTable->table[index];
+
+    if (head == NULL)
+    {
+        return NULL;
+    }
+
+    while (!hashTable->cmpFunction(head->value, targetValue) && head->next != NULL)
+    {
+        head = head->next;
+    }
+
+    if (hashTable->cmpFunction(head->value, targetValue) != 0)
+    {
+        return NULL;
+    }
+
+    return head;
+}
 
 lst_hash_node_t *give_next_node_pointer(lst_hash_table_t *table)
 {
@@ -109,7 +102,6 @@ lst_hash_node_t *give_next_node_pointer(lst_hash_table_t *table)
 error_t realloc_list_table(lst_hash_table_t *table)
 {
     assert(0);
-
     lst_hash_node_t *oldNode = table->allocatedSegment;
     uint32_t newSize = next_prime (table->allocatingSize * 2);
     table->allocatedSegment = (lst_hash_node_t *) realloc(table->allocatedSegment, 
@@ -137,7 +129,8 @@ error_t realloc_list_table(lst_hash_table_t *table)
 
 error_t add_to_list_table(lst_hash_table_t *table, hash_value_t value)
 {
-    uint32_t index = table->hashfunction(value, table) % table->tableSize;
+    uint32_t index = table->hashfunction(value, table);
+    //printf("adding_________________%d\n", index);
     lst_hash_node_t *previousNode = NULL;
 
     if(table->checkIfValueInTable == true){
@@ -234,4 +227,35 @@ error_t reinit_list_table(lst_hash_table_t *table, uint32_t size)
     return ERR_SUCCESS;
 }
 
+
+error_t init_list_table(uint32_t         (*hashfunction)(hash_value_t, lst_hash_table_t *),
+                        int32_t          (*cmpFunction) (hash_value_t, hash_value_t),
+                        lst_hash_node_t *(*findFunction)(hash_value_t targetValue, lst_hash_table_t *hashTable),
+                        bool rehashing, lst_hash_table_t *table, uint32_t size, uint32_t startNumOfNodes)
+{
+    table->allocatedSegment = (lst_hash_node_t *)calloc(startNumOfNodes, sizeof(lst_hash_node_t));
+    if(table->allocatedSegment == NULL) return ERR_NO_MEMORY;
+    table->allocatingSize = startNumOfNodes;
+
+    if (reinit_list_table(table, size))
+    {
+        free(table->allocatedSegment);
+        return ERR_NO_MEMORY;
+    }
+
+    table->cmpFunction = cmpFunction;
+    table->hashfunction = hashfunction;
+    table->rehashing = rehashing;
+    table->findFunction = findFunction;
+
+    return ERR_SUCCESS;
+}
+
+error_t destroy_list_table(lst_hash_table_t *table)
+{
+    free(table->table);
+    free(table->allocatedSegment);
+
+    return ERR_SUCCESS;
+}
 

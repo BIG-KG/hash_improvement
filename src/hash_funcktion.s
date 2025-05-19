@@ -1,38 +1,49 @@
 section .text
 
-global printf__my
 
-section .text
-global fnv1a_hash_asm
+global hashing_crc32_string_asm
 
-;INPUT  : RDI - start of string, RSI - ptr to table structure
-;OUTPUT : RAX - hash
-;DST    : RAX, RCX, RDX
+; RDI — строка (выровненная по 16 байт)
+; RSI — ptr на table.size
+; RAX — вернёт хеш (crc32 % size)
 
+hashing_crc32_string_asm:
 
-fnv1a_hash_asm:
-    ; Инициализация
-    mov eax, [rsi+4]         ; eax = FNV_OFFSET (2166136261)
-                             ; rdi = inputKey.ptr (указатель на строку)
-    mov ecx, [rsi+8]         ; ecx = FNV_PRIME (предполагаем tableSize по смещению 0)
+    push rbx
 
-    jmp .check
+    xor     eax, eax
+    mov     ebx, 0xFFFFFFFF
+    mov     rdx, rdi          ; rdx = ptr
 
-.loop:
-    ; Загружаем очередной байт строки
-    xor al, dl                  ; hash ^= *str
-    imul eax, ecx               ; hash *= FNV_PRIME(ecx) (eax *= edx, результат в eax)
-    inc rdi                     ; str++
-.check:
-    movzx edx, byte [rdi]       ; edx = *str (zero-extend byte to 32-bit)
-    test dl, dl                 ; *str == '\0'?
-    jnz .loop                   ; Если не конец, продолжить цикл
+.loop64:
+    mov     rax, [rdx]
+
+    test   al, al
+    jz     .test_tail
+
+    crc32   rbx, rax
+    add     rdx, 8
+    jmp     .loop64
+
+.tail_loop:
+    crc32   ebx, cl
+    inc     rdx
+.test_tail:
+    movzx   ecx, byte [rdx]
+    test    cl, cl
+    jz      .tail_loop
 
 .done:
-    ; Вычисляем hash % tableSize
-    mov ecx, [rsi]              ; rcx = table->tableSize (предполагаем tableSize по смещению 0)
-    xor edx, edx                ; Обнуляем edx для div
-    div rcx                     ; eax / rcx, остаток в edx
-    mov eax, edx                ; eax = hash % tableSize
+    ; делим на table.size
+    mov     ecx, dword [rsi]
+    xor     edx, edx
+    mov     eax, ebx
+    xor     eax, -1
+    div     ecx
+    mov     eax, edx
 
+    pop rbx 
     ret
+
+    
+section .data

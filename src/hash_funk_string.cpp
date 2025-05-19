@@ -7,50 +7,37 @@
 #include <error_hash.h>
 #include <hash_link.h>
 #include <settings.h>
+#include <crcTable.h>
 
-uint32_t hashing_length_string(hash_value_t inputKey, lst_hash_table_t *table)
-{
-    return strlen((char*)inputKey.ptr) % table->tableSize;
+// CRINGE: funCCCCtion
+
+void crc32_init(uint32_t *crc32_table) {
+    uint32_t polynomial = 0xEDB88320;
+    for (uint32_t i = 0; i < 256; i++) {
+        uint32_t c = i;
+        for (int j = 0; j < 8; j++)
+            c = (c >> 1) ^ (polynomial & -(c & 1));
+        crc32_table[i] = c;
+    }
 }
 
-uint32_t hashing_sum_string(hash_value_t inputKey, lst_hash_table_t *table)
-{
-    char *key = (char *)inputKey.ptr;
-    int32_t  i = 0;
-    uint32_t hash = 0;
-    while (key[i] != '\0')
+uint32_t hashing_crc32_string(hash_value_t inputKey, lst_hash_table_t *table){
+    static int startCounter = 0;
+    static uint32_t crc32_table[256];
+
+    if(startCounter == 0)
     {
-        hash += key[i];
+        crc32_init(crc32_table);
+        startCounter ++;
     }
 
-    return hash % table->tableSize;
+    const uint8_t* bytes = (const uint8_t*)inputKey.ptr;
+    uint32_t crc = 0xFFFFFFFF;
+
+    for (size_t i = 0; bytes[i] != '\0' ; i++)
+        crc = (crc >> 8) ^ crc32_table[(crc ^ bytes[i]) & 0xFF];
+
+    crc ^= 0xFFFFFFFF;
+
+    return crc % table->tableSize;
 }
-
-uint32_t hashing_polynomial_string(hash_value_t inputKey, lst_hash_table_t *table)
-{
-    char *key = (char *)inputKey.ptr;
-    int32_t  i = 0;
-    uint32_t hash = 0;
-    uint32_t pow = 1;
-
-    while (key[i] != '\0')
-    {
-        hash += key[i] * pow;
-        pow *= table->hashingConst1;
-    }
-
-    return hash % table->tableSize;    
-}
-
-uint32_t fnv1a_hash(hash_value_t inputKey, lst_hash_table_t *table) {
-    const uint32_t FNV_PRIME = 16777619u;
-    const uint32_t FNV_OFFSET = 2166136261u;
-    uint32_t hash = FNV_OFFSET;
-    char *str = (char *)inputKey.ptr;
-    while (*str != '\0') {
-        hash ^= (uint32_t)(*str++);
-        hash *= FNV_PRIME;
-    }
-    return hash % table->tableSize;
-}
-
