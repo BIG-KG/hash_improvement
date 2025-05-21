@@ -19,19 +19,19 @@ hashing_crc32_string_asm:
     mov     rax, [rdx]
 
     test   al, al
-    jz     .test_tail
+    jz     .tail_loop
 
     crc32   rbx, rax
     add     rdx, 8
     jmp     .loop64
 
 .tail_loop:
-    crc32   ebx, cl
-    inc     rdx
-.test_tail:
     movzx   ecx, byte [rdx]
     test    cl, cl
-    jz      .tail_loop
+    jz      .done
+    crc32   ebx, cl
+    inc     rdx
+    jmp     .tail_loop
 
 .done:
     ; делим на table.size

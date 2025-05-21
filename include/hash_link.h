@@ -27,10 +27,7 @@ struct lst_hash_table_t
     uint32_t         tableSize         = 0;
     uint32_t         hashingConst1     = 0;
     uint32_t         hashingConst2     = 0;
-    uint32_t         (*hashfunction)(hash_value_t, lst_hash_table_t *);
     lst_hash_node_t  **table           = NULL;
-    int32_t          (*cmpFunction) (hash_value_t, hash_value_t);
-    lst_hash_node_t *(*findFunction)(hash_value_t targetValue, lst_hash_table_t *hashTable);
     uint32_t         checkIfValueInTable = true;
     lst_hash_node_t  *allocatedSegment = NULL;
     uint32_t         numberOfElements  = 0;
@@ -48,8 +45,5 @@ lst_hash_node_t *find_list_table               (hash_value_t targetValue, lst_ha
 lst_hash_node_t *find_list_table_nasm          (hash_value_t targetValue, lst_hash_table_t *hashTable);
 
 error_t destroy_list_table(lst_hash_table_t *table);
-error_t init_list_table(uint32_t         (*hashfunction)(hash_value_t, lst_hash_table_t *),
-                        int32_t          (*cmpFunction) (hash_value_t, hash_value_t),
-                        lst_hash_node_t *(*findFunction)(hash_value_t targetValue, lst_hash_table_t *hashTable),
-                        bool rehashing, lst_hash_table_t *table, uint32_t size, uint32_t startNumOfNodes);
+error_t init_list_table(bool rehashing, lst_hash_table_t *table, uint32_t size, uint32_t startNumOfNodes);
 #endif

@@ -17,10 +17,7 @@ extern "C" uint32_t hashing_crc32_string_asm(hash_value_t inputKey, lst_hash_tab
 
 const int BUFFER_SIZE = 512;
 
-float test_string(uint32_t         (*hashfunction)(hash_value_t, lst_hash_table_t *),
-                  int32_t          (*cmpFunction) (hash_value_t, hash_value_t),
-                  lst_hash_node_t *(*findFunction)(hash_value_t targetValue, lst_hash_table_t *hashTable),
-                  char **stringArray, uint32_t numOfStrings                                                      )
+float test_string(char **stringArray, uint32_t numOfStrings                                                      )
 {
     lst_hash_table_t table = {};
     uint32_t numOfActions = numOfStrings * 10;
@@ -28,15 +25,12 @@ float test_string(uint32_t         (*hashfunction)(hash_value_t, lst_hash_table_
     srand(0);
 
 
-    if(init_list_table(hashfunction,
-                      cmpFunction, 
-                      findFunction, 
-                      true,  &table, TABLE_SIZE_PART1, numOfActions)) return -1.0f;
+    if(init_list_table(true,  &table, TABLE_SIZE_PART1, numOfActions)) return -1.0f;
 
     float start_time = clock();
     for(int i = 0; i < numOfActions; i++)
     {   
-        action = rand() % 4;
+        action = rand() % 3;
         value  = rand() % numOfStrings;
         hash_value_t tmp;
         tmp.ptr = stringArray[value];
@@ -47,12 +41,15 @@ float test_string(uint32_t         (*hashfunction)(hash_value_t, lst_hash_table_
             case 1:
                 add_to_list_table(&table, tmp);
                 break;
+
+            #ifndef MY_UPGRADE_3
             case 2:
-                delete_from_list_table(&table, tmp);
+                find_list_table(tmp, &table);
                 break;
-            case 3:
-                table.findFunction(tmp, &table);
-                break;
+            #else
+            case 2:
+                find_list_table_nasm(tmp, &table);
+            #endif
         }
         CALLGRIND_TOGGLE_COLLECT;
 
@@ -102,26 +99,13 @@ char **scanFile16bit(char *filename, uint32_t *numOfStrings)
     return strings;
 }
 
-int main(int argc, char *argv[]){
+int main(){
     uint32_t numOfValues = 0;
     char **stringArray = scanFile16bit("./string.txt", &numOfValues);
+    
     if(stringArray == NULL) return 1;
 
-    uint32_t         (*hashfunction)(hash_value_t, lst_hash_table_t *) = hashing_crc32_string;
-    int32_t          (*cmpFunction) (hash_value_t, hash_value_t)       = hasing_compare_string;
-    lst_hash_node_t *(*findFunction)(hash_value_t targetValue, lst_hash_table_t *hashTable) = find_list_table;
-    
-
-    if (argc == 4){
-        if(!strcmp(argv[1], "1"))
-            hashfunction = hashing_crc32_string_asm;
-        if(!strcmp(argv[2], "1"))
-            cmpFunction = hasing_compare_string_simd;
-        if(!strcmp(argv[3], "1"))
-            findFunction = find_list_table_nasm;
-    }
-
-    float resulTime = test_string(hashfunction, cmpFunction, findFunction, stringArray, numOfValues);
+    float resulTime = test_string(stringArray, numOfValues);
 
     free(stringArray[0]);
     free(stringArray);
