@@ -9,6 +9,9 @@ const int MAX_LOAD_FACTOR = 15;
 #define START_AMOUNT_ALLOCATED_SEGMENTS 100
 
 const int MINIMUM_STRING_LENGTH_STEP = 16;
-`
+
+#define UPGRADE_1
+#define UPGRADE_2
+#define UPGRADE_3
 
 #endif // SETTINGS_H

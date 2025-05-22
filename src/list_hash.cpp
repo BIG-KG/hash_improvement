@@ -18,7 +18,6 @@ error_t realloc_list_table(lst_hash_table_t *table);
 
 extern "C" uint32_t hashing_crc32_string_asm(hash_value_t inputKey, lst_hash_table_t* table);
 
-
 extern "C" int32_t hasing_compare_string_simd(hash_value_t s1Struct, hash_value_t s2Struct)
 {
     char *s1 = (char *)s1Struct.ptr;
